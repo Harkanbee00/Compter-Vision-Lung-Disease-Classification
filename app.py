@@ -120,10 +120,6 @@ if page == "Upload Image":
             st.subheader("Prediction Probabilities")
             # Show a bar chart of the class probabilities.
             st.bar_chart(probability_frame.set_index("Class"))
-    # Show a helpful message before any file is uploaded.
-    else:
-        # Prompt the user to upload an image to begin.
-        st.info("Upload a Lung X-ray image to start the demo.")
 
 elif page == "Sample Images":
     st.title("📸 Sample X-Rays")
