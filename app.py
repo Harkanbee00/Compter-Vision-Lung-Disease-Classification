@@ -41,7 +41,7 @@ def predict_image(image, model, class_names):
     index = np.argmax(prediction)
     class_name = class_names[index]
     
-    # Normally class names from teachable machine are like "0 ClassName", so we strip the prefix if it exists
+    # Normally class names from Teachable Machine are like "0 ClassName", so we strip the prefix if it exists
     if " " in class_name and class_name.split(" ")[0].isdigit():
         class_name = class_name.split(" ", 1)[1]
         
@@ -50,9 +50,9 @@ def predict_image(image, model, class_names):
 
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to:", ["Upload an Image", "Sample Images"])
+page = st.sidebar.radio("Go to:", ["Upload Image", "Sample Images"])
 
-if page == "Upload an Image":
+if page == "Upload Image":
     st.title("🫁 Lung Disease Image Classifier")
     st.markdown("Upload an image and get a prediction from a trained model.")
 
@@ -142,7 +142,7 @@ elif page == "Sample Images":
     st.divider()
     
     # We will look for images inside a folder named 'sample_images'
-    samples_dir = "sample_images"
+    samples_dir = "Sample Images"
     
     if not os.path.exists(samples_dir):
         st.warning(f"No '{samples_dir}' folder found. Please properly create a folder named '{samples_dir}' inside your repository and place your sample images inside it.")
