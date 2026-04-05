@@ -41,7 +41,7 @@ def predict_image(image, model, class_names):
     index = np.argmax(prediction)
     class_name = class_names[index]
     
-    # Normally class names from Teachable Machine are like "0 ClassName", so we strip the prefix if it exists
+    # Normally class names from teachable machine are like "0 ClassName", so we strip the prefix if it exists
     if " " in class_name and class_name.split(" ")[0].isdigit():
         class_name = class_name.split(" ", 1)[1]
         
@@ -56,12 +56,8 @@ if page == "Upload Image":
     st.title("🫁 Lung Disease Image Classifier")
     st.markdown("Upload an image and get a prediction from a trained model.")
 
-    # Add an expandable note so your audience sees the model limitation.
-    with st.expander("Important note"):
-        # Explain that the tool is for educational demonstration only.
-        st.write(
-            "This app is for educational purposes only. It is not a medical device and must not be used as a clinical diagnosis tool."
-        )
+    # Add an informational note so your audience sees the model limitation.
+    st.info("This app is for educational purposes only. It is not a medical device and must not be used as a clinical diagnosis tool.", icon="ℹ️")
 
     # Safely check if files exist before trying to load them
     if not os.path.exists("model.savedmodel"):
@@ -103,14 +99,11 @@ if page == "Upload Image":
             # Show a red box when the predicted class is Lung Opacity or Viral Pneumonia.
             if predicted_label in ["Lung_Opacity", "Viral Pneumonia"]:
                 # Display the final predicted label in an error-style box.
-                st.error(f"Predicted class: {predicted_label}")
+                st.error(f"{predicted_label} ({confidence:.1%})")
             # Show a green box when the predicted class is normal.
             else:
                 # Display the final predicted label in a success-style box.
-                st.success(f"Predicted class: {predicted_label}")
-
-            # Display the confidence score for the final predicted class.
-            st.write(f"Confidence: {confidence:.4f}")
+                st.success(f"{predicted_label} ({confidence:.1%})")
 
             # Strip prefixes from class names for probability chart display
             display_names = [name.split(" ", 1)[1] if " " in name and name.split(" ")[0].isdigit() else name for name in class_names]
@@ -119,14 +112,12 @@ if page == "Upload Image":
             probability_frame = pd.DataFrame(
                 {
                     "Class": display_names,
-                    "Probability": probabilities,
+                    "Probability (%)": [float(p) * 100 for p in probabilities],
                 }
             )
 
             # Add a heading for the probability chart.
-            st.subheader("Class probabilities")
-            # Show the probability table so the user can read exact values.
-            st.dataframe(probability_frame, use_container_width=True)
+            st.subheader("Prediction Probabilities")
             # Show a bar chart of the class probabilities.
             st.bar_chart(probability_frame.set_index("Class"))
     # Show a helpful message before any file is uploaded.
@@ -136,8 +127,7 @@ if page == "Upload Image":
 
 elif page == "Sample Images":
     st.title("📸 Sample X-Rays")
-    st.markdown("Feel free to download any of these sample images to test the model on the **Lung Classifier** page.")
-    st.markdown("*(You can click the **Download Image** buttons below, or right-click an image and select **Save image as...**)*")
+    st.markdown("Select a sample image below to run a prediction instantly.")
     
     st.divider()
     
@@ -154,24 +144,29 @@ elif page == "Sample Images":
         if not sample_files:
             st.info(f"The '{samples_dir}' folder is currently empty! Please place some .jpg or .png X-ray images inside it.")
         else:
+            # Load the model directly here too
+            model, class_names = load_teachable_model()
+
             # Display the images in a grid format with 3 columns
             cols = st.columns(3)
             for index, image_name in enumerate(sample_files):
                 image_path = os.path.join(samples_dir, image_name)
                 try:
-                    img = Image.open(image_path)
+                    img = Image.open(image_path).convert("RGB")
                     # Route image rendering into a 3-column grid structure
                     with cols[index % 3]:
                         st.image(img, caption=image_name, use_container_width=True)
                         
-                        # Add a quick download button underneath the image
-                        with open(image_path, "rb") as file:
-                            st.download_button(
-                                label="Download Image",
-                                data=file,
-                                file_name=image_name,
-                                mime="image/png" if image_path.lower().endswith(".png") else "image/jpeg",
-                                key=f"download_{index}"
-                            )
+                        # Add a quick predict button underneath the image
+                        if st.button("Predict this Image", key=f"predict_{index}"):
+                            # Run the prediction
+                            predicted_label, confidence, probabilities = predict_image(img, model, class_names)
+                            
+                            # Show a red box when the predicted class is Lung Opacity or Viral Pneumonia.
+                            if predicted_label in ["Lung_Opacity", "Viral Pneumonia"]:
+                                st.error(f"{predicted_label} ({confidence:.1%})")
+                            # Show a green box when the predicted class is normal.
+                            else:
+                                st.success(f"{predicted_label} ({confidence:.1%})")
                 except Exception as e:
                     st.error(f"Could not load image {image_name}")
