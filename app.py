@@ -48,6 +48,35 @@ def predict_image(image, model, class_names):
     confidence = prediction[0][index]
     return class_name, confidence, prediction[0]
 
+def display_prediction_results(predicted_label, confidence, probabilities, class_names):
+    """
+    Displays the prediction result, an explanation, and the probability chart.
+    """
+    st.subheader("Prediction result")
+
+    if predicted_label in ["Lung_Opacity", "Viral Pneumonia"]:
+        st.error(f"{predicted_label} ({confidence:.1%})")
+        if predicted_label == "Lung_Opacity":
+            st.info("**What is Lung Opacity?** This typically refers to cloudy or fuzzy areas on a chest X-ray, suggesting fluid, infection, or tissue buildup instead of clear air.")
+        elif predicted_label == "Viral Pneumonia":
+            st.info("**What is Viral Pneumonia?** This indicates lung inflammation caused by a viral infection. It often appears as diffuse opacities on an X-ray.")
+    else:
+        st.success(f"{predicted_label} ({confidence:.1%})")
+        st.info("**What is a Normal Prediction?** No clear signs of opacity or viral pneumonia were detected in this X-ray, suggesting generally healthy lungs.")
+
+    # Strip prefixes from class names for probability chart display
+    display_names = [name.split(" ", 1)[1] if " " in name and name.split(" ")[0].isdigit() else name for name in class_names]
+
+    probability_frame = pd.DataFrame(
+        {
+            "Class": display_names,
+            "Probability (%)": [float(p) * 100 for p in probabilities],
+        }
+    )
+
+    st.subheader("Prediction Probabilities")
+    st.bar_chart(probability_frame.set_index("Class"))
+
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to:", ["Upload Image", "Sample Images"])
@@ -93,33 +122,8 @@ if page == "Upload Image":
             # Run the model on the uploaded image and collect the outputs.
             predicted_label, confidence, probabilities = predict_image(uploaded_image, model, class_names)
 
-            # Write a section heading for the result.
-            st.subheader("Prediction result")
-
-            # Show a red box when the predicted class is Lung Opacity or Viral Pneumonia.
-            if predicted_label in ["Lung_Opacity", "Viral Pneumonia"]:
-                # Display the final predicted label in an error-style box.
-                st.error(f"{predicted_label} ({confidence:.1%})")
-            # Show a green box when the predicted class is normal.
-            else:
-                # Display the final predicted label in a success-style box.
-                st.success(f"{predicted_label} ({confidence:.1%})")
-
-            # Strip prefixes from class names for probability chart display
-            display_names = [name.split(" ", 1)[1] if " " in name and name.split(" ")[0].isdigit() else name for name in class_names]
-
-            # Build a small DataFrame to display class probabilities neatly.
-            probability_frame = pd.DataFrame(
-                {
-                    "Class": display_names,
-                    "Probability (%)": [float(p) * 100 for p in probabilities],
-                }
-            )
-
-            # Add a heading for the probability chart.
-            st.subheader("Prediction Probabilities")
-            # Show a bar chart of the class probabilities.
-            st.bar_chart(probability_frame.set_index("Class"))
+            # Display results using the common helper function
+            display_prediction_results(predicted_label, confidence, probabilities, class_names)
 
 elif page == "Sample Images":
     st.title("📸 Sample X-Rays")
@@ -143,26 +147,17 @@ elif page == "Sample Images":
             # Load the model directly here too
             model, class_names = load_teachable_model()
 
-            # Display the images in a grid format with 3 columns
-            cols = st.columns(3)
-            for index, image_name in enumerate(sample_files):
-                image_path = os.path.join(samples_dir, image_name)
+            # Provide a selectbox to choose a sample image
+            selected_sample = st.selectbox("Choose a sample image", sample_files)
+            
+            if selected_sample:
+                image_path = os.path.join(samples_dir, selected_sample)
                 try:
                     img = Image.open(image_path).convert("RGB")
-                    # Route image rendering into a 3-column grid structure
-                    with cols[index % 3]:
-                        st.image(img, caption=image_name, use_container_width=True)
-                        
-                        # Add a quick predict button underneath the image
-                        if st.button("Predict this Image", key=f"predict_{index}"):
-                            # Run the prediction
-                            predicted_label, confidence, probabilities = predict_image(img, model, class_names)
-                            
-                            # Show a red box when the predicted class is Lung Opacity or Viral Pneumonia.
-                            if predicted_label in ["Lung_Opacity", "Viral Pneumonia"]:
-                                st.error(f"{predicted_label} ({confidence:.1%})")
-                            # Show a green box when the predicted class is normal.
-                            else:
-                                st.success(f"{predicted_label} ({confidence:.1%})")
+                    st.image(img, caption=selected_sample, use_container_width=True)
+                    
+                    if st.button("Predict this Image", key="predict_sample"):
+                        predicted_label, confidence, probabilities = predict_image(img, model, class_names)
+                        display_prediction_results(predicted_label, confidence, probabilities, class_names)
                 except Exception as e:
-                    st.error(f"Could not load image {image_name}")
+                    st.error(f"Could not load image {selected_sample}")
