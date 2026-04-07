@@ -54,11 +54,14 @@ def display_prediction_results(predicted_label, confidence, probabilities, class
     """
     st.subheader("Prediction result")
 
-    if predicted_label in ["Lung_Opacity", "Viral Pneumonia"]:
+    # Normalize the label to make comparisons robust to spacing and casing
+    label_lower = predicted_label.lower().replace("_", " ")
+
+    if label_lower in ["lung opacity", "viral pneumonia"]:
         st.error(f"{predicted_label} ({confidence:.1%})")
-        if predicted_label == "Lung_Opacity":
+        if label_lower == "lung opacity":
             st.info("**What is Lung Opacity?** This typically refers to cloudy or fuzzy areas on a chest X-ray, suggesting fluid, infection, or tissue buildup instead of clear air.")
-        elif predicted_label == "Viral Pneumonia":
+        elif label_lower == "viral pneumonia":
             st.info("**What is Viral Pneumonia?** This indicates lung inflammation caused by a viral infection. It often appears as diffuse opacities on an X-ray.")
     else:
         st.success(f"{predicted_label} ({confidence:.1%})")
